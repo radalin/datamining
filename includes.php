@@ -44,9 +44,6 @@ class DataCubeReader
             $cube = new DataCube($numberValue, $cubeItems);
             $cubeList[$numberValue]->add($cube);
             $cube = null;
-            if ($i > $this->_cubeSize * 100) {
-                break;
-            }
         }
         return $cubeList;
     }
@@ -151,7 +148,7 @@ class DataCube
     {
         $heuristics = array();
         for ($i = 0; $i < $cubeList->count(); $i++) {
-            $heuristics[$i] = $this->matchWith($cubeArray->get($i)); //Calculate the heuristics for the DataCube thingy...
+            $heuristics[$i] = $this->_matchWith($cubeArray->get($i)); //Calculate the heuristics for the DataCube thingy...
         }
         //Now match with $k nearest neighbors...
         //Sort the array as decreasing while keeping the index values (key-value associations) where I will get to the DataCube from $cubeList...
@@ -188,21 +185,20 @@ class DataCube
     public function draw()
     {
         echo '<div class="dataCube"> This Number is: ' . $this->_numberValue . '<br />';
-
         for ($i = 0; $i < count($this->_dataArray); $i++) {
             echo '<div class="dataCubeRow">';
             for ($j = 0; $j < count($this->_dataArray[$i]); $j++) {
                 $color = $this->_findCellColor($i, $j);
-                $this->_drawCellWithColor($color);
+                $this->_drawCellWithColor($color, $this->_dataArray[$i][$j]);
             }
             echo '</div>';
         }
         echo '</div><br />';
     }
     
-    protected function _drawCellWithColor($color)
+    protected function _drawCellWithColor($color, $text = null)
     {
-        echo '<div class="dataCubeCell" style="background-color:' . $color . '">&nbsp;</div>';
+        echo '<div class="dataCubeCell" style="background-color:' . $color . '"></div>';
     }
 }
 
@@ -225,14 +221,27 @@ class MeanDataCube extends DataCube
             }
         }
     }
-    
     protected function _findCellColor($x, $y)
     {
         if ($this->_dataArray[$x][$y] === 0) {
             return "white"; //If it's none no need to bother with calculations, just return white...
         }
+        if ($this->_dataArray[$x][$y] === $this->_sampleSize) {
+            return "black"; //If it's equal to sampleSize no need to bother with calculations, just return black...
+        }
+        //If it's something else no need to bother with calculations, oh,... I have to...
         $val = (int) $this->_dataArray[$x][$y] * 256 / $this->_sampleSize;
         $rgb = dechex(256 - $val);
+        if (strlen($rgb) === 1) {
+            $rgb = "0" . $rgb; //Bad fix to fix the problem which occurs in RGB 'c' was interpreted as 'cc' however it should have been interpreted as '0c'!!!!
+        }
         return "#" . $rgb . $rgb . $rgb;
+    }
+    
+    public function draw()
+    {
+        echo '<div>Total Number of Samples: ' . $this->_sampleSize . '</div>';
+        parent::draw();
+        echo '</div>';
     }
 }
