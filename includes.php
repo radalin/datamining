@@ -6,13 +6,16 @@
  */
 class DataCubeReader
 {
-    private $_fileName;
+    private $_traFile;
+    
+    private $_testFile;
     
     private $_cubeSize;
     
-    public function __construct($fileName = "testcom.txt", $cubeSize = 16)
+    public function __construct($cubeSize = 16, $trainingFile = "traicom.txt", $testFile = "testcom.txt")
     {
-        $this->_fileName = $fileName;
+        $this->_traFile = $trainingFile;
+        $this->_testFile = $testFile;
         $this->_cubeSize = $cubeSize;
     }
     
@@ -20,10 +23,10 @@ class DataCubeReader
      *
      * @return array<DataCubeList>
      */
-    public function read()
+    public function readTrainingData()
     {
         //Read it line by line...
-        $fileContents = split("\n", file_get_contents($this->_fileName));
+        $fileContents = split("\n", file_get_contents($this->_traFile));
         //Split from lines...
         $count = count($fileContents);
         $cubeList = array();
@@ -46,6 +49,54 @@ class DataCubeReader
             $cube = null;
         }
         return $cubeList;
+    }
+    
+    public function readTestData()
+    {
+        //Read it line by line...
+        $fileContents = split("\n", file_get_contents($this->_testFile));
+        //Split from lines...
+        $count = count($fileContents);
+        $cubeList = array();
+        for ($i = 0; $i < $count; $i += $this->_cubeSize + 1) { //Increase the count 17 by 17, so read the cubes as block...
+            $numberValue = trim($fileContents[$i + $this->_cubeSize]);
+            $cubeItems = array();
+            for ($x = 0; $x < $this->_cubeSize; $x++) {
+                $row = array();
+                for ($y = 0; $y < 16; $y++) {
+                    $row[] = $fileContents[$i + $x][$y]; //Just add the string value to the array because I can use that string as an array in PHP...
+                }
+                $cubeItems[] = $row;
+            }
+            $cube = new DataCube($numberValue, $cubeItems);
+            $cubeList[] = clone $cube;
+            $cube = null;
+        }
+        return $cubeList;
+    }
+}
+
+class CubeMatcher
+{
+    private $_reader;
+    
+    private $_dataCubeList;
+    
+    public function __construct($trainFile, $testFile, $cubeSize)
+    {
+        $this->_reader = new DataCubeReader($cubeSize, $trainFile, $testFile);
+    }
+    
+    public function trainMe()
+    {
+        $this->_dataCubeList = $this->_reader->readTrainingData();
+    }
+    
+    public function drawMeans()
+    {
+        for ($i = 0; $i < count($this->_dataCubeList); $i++) {
+            $this->_dataCubeList[$i]->drawMean();
+        }
     }
 }
 
@@ -99,6 +150,14 @@ class DataCubeList
         }
         echo '</div>';
     }
+    
+    public function getMean()
+    {
+        if ($this->_meanDataCube == null) {
+            $this->calculateMeanDataCube();
+        }
+        return $this->_meanDataCube;
+    }
         
     public function drawMean()
     {
@@ -133,6 +192,12 @@ class DataCube
     private function _matchWith(DataCube $cube)
     {
         //Return the heuristic number...
+        //The mathic numbers gives us a point, higher points means, higher matching the one with highest match num is the winner...
+        for ($i = 0; $i < count($this->_dataArray); $i++) {
+            for ($j = 0; $j < count($this->_dataArray[$i]); $j++) {
+                //if ($this->)
+            }
+        }
     }
     
     public function matchWithAll(DataCubeList $cubeList)
@@ -240,7 +305,7 @@ class MeanDataCube extends DataCube
     
     public function draw()
     {
-        echo '<div>Total Number of Samples: ' . $this->_sampleSize . '</div>';
+        echo '<div class="meanContainer' . $this->_numberValue . '">Total Number of Samples: ' . $this->_sampleSize;
         parent::draw();
         echo '</div>';
     }
