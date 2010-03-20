@@ -1,29 +1,29 @@
-<?php require("includes.php"); ?>
+<?php
+require("includes.php");
+$cellSize = 10;
+?>
 <html>
     <head>
+        <!-- //Some required stylish things, not that much important... -->
         <style>
-            div.dataCubeCell {
-                width: 5px;
-                height: 5px;
-                display: inline;
-            }
-            div.dataCube {
-                margin: 10px;
-            }
+            div.dataCubeCell { width: <?=$cellSize?>px; height: <?=$cellSize?>px; display: table-cell; }
+            div.dataCube { margin: 10px; }
+            <?php
+                for ($i = 0; $i < 10; $i++) {
+                    echo 'div.allContainer' . $i . '{ position: absolute; left: ' . 260 * $i . 'px;}';
+                }
+            ?>
         </style>
     </head>
     <body>
         <?php
             //Create the DataReader and read the file...
             //We will create sample Examples from there...
-            $reader = new DataCubeReader("traicom.txt");
+            $reader = new DataCubeReader("traicom.txt", 16);
             $dataCubes = $reader->read();
-            //Now calculate the mean and draw them all
-            //for ($i = 0; $i < count($dataCubes); $i++) {
-            //    $dataCubes->drawMean();
-            //}
-            var_dump($dataCubes);
-            $dataCubes[0]->drawAll();
+            for ($i = 0; $i < count($dataCubes); $i++) {
+                $dataCubes[$i]->drawMean();
+            }
         ?>
     </body>
 </html>

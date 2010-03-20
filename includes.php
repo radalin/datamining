@@ -44,7 +44,7 @@ class DataCubeReader
             $cube = new DataCube($numberValue, $cubeItems);
             $cubeList[$numberValue]->add($cube);
             $cube = null;
-            if ($i > $this->_cubeSize * 20) {
+            if ($i > $this->_cubeSize * 100) {
                 break;
             }
         }
@@ -59,7 +59,7 @@ class DataCubeList
     private $_numberValueForSamples = null;
     
     /**
-     * @DataCube
+     * @var MeanDataCube
      */
     private $_meanDataCube = null;
     
@@ -71,7 +71,11 @@ class DataCubeList
     
     public function calculateMeanDataCube()
     {
-        $this->_meanDataCube = $this->_cubeArray[0];
+        //Now create a sum of all the samples we have...
+        $this->_meanDataCube = new MeanDataCube($this->_numberValueForSamples, $this->_cubeArray[0]->dataArray); //Add the first cube to the list...
+        for ($i = 1; $i < $this->count(); $i++) { //As I have added the first, keep going from the index with 1...
+            $this->_meanDataCube->addToSum($this->_cubeArray[$i]); //This will calculate the rest...
+        }
     }
     
     //Below is the less important stuff some simple getters and setters and drawers etc...
@@ -92,9 +96,11 @@ class DataCubeList
         
     public function drawAll()
     {
+        echo '<div class="allContainer' . $this->_numberValueForSamples . '">Total Number of Samples: ' . $this->count();
         for ($i = 0; $i < $this->count(); $i++) {
             $this->_cubeArray[$i]->draw();
         }
+        echo '</div>';
     }
         
     public function drawMean()
@@ -108,11 +114,11 @@ class DataCubeList
 
 class DataCube
 {
-    private $_dataArray = array();
+    protected $_dataArray = array();
     
-    private $_numberValue = null;
+    protected $_numberValue = null;
     
-    public function __construct($number, $array)
+    public function __construct($number = null, $array = array())
     {
         $this->_dataArray = $array;
         $this->_numberValue = $number;
@@ -127,17 +133,41 @@ class DataCube
         return "#FFFFFF"; //Return white...
     }
     
-    public function matchWith(DataCube $cube)
+    private function _matchWith(DataCube $cube)
     {
-        
+        //Return the heuristic number...
     }
     
     public function matchWithAll(DataCubeList $cubeList)
+    {
+        return $this->matchWithNearest($cubeList, 1); //Match with the closes match only...
+    }
+    
+    /**
+     * @param int $k the closest neighbor which I will care about...
+     * @return int the closes number value.
+     */
+    public function matchWithNearest(DataCubeList $cubeList, $k)
     {
         $heuristics = array();
         for ($i = 0; $i < $cubeList->count(); $i++) {
             $heuristics[$i] = $this->matchWith($cubeArray->get($i)); //Calculate the heuristics for the DataCube thingy...
         }
+        //Now match with $k nearest neighbors...
+        //Sort the array as decreasing while keeping the index values (key-value associations) where I will get to the DataCube from $cubeList...
+        $heuristics = asort($heuristics);
+        //So here is the easy part, what are the values of top $k elements...
+        for ($i = 0; $i < 10; $i++) {
+            $numbers[$i] = 0; //A baaaaaaaad code comes here....
+        }
+        for ($i = 0; $i <= $k; $i++) {
+            var_dump($cubeArray->get($i)->numberValue, $heuristics[$i]);
+            $numbers[$cubeArray->get($i)->numberValue]++;
+        }
+        //Now sort the numbers array without maintaining the key-value association
+        ksort($numbers);
+        var_dump($numbers);
+        return $numbers[0]; //Returns the number with highest value...
     }
   
     //The below is the less important stuff, the drawing implementation etc...
@@ -178,18 +208,31 @@ class DataCube
 
 class MeanDataCube extends DataCube
 {
-    private $_sampleSize = 0;
+    private $_sampleSize;
     
-    public function __construct($number, $array, $sampleSize)
+    public function __construct($number, $array)
     {
         parent::__construct($number, $array);
-        $this->_sampleSize = $sampleSize;
+        $this->_sampleSize = 1;
+    }
+    
+    public function addToSum(DataCube $cube)
+    {
+        $this->_sampleSize++; //Increase the sample size...
+        for ($x = 0; $x < count($this->_dataArray); $x++) {
+            for ($y = 0; $y < count($this->_dataArray[$x]); $y++) {
+                $this->_dataArray[$x][$y] = $this->_dataArray[$x][$y] + $cube->dataArray[$x][$y];
+            }
+        }
     }
     
     protected function _findCellColor($x, $y)
     {
-        //Color of the cell will be different according to the value there is
-        //Not just a black and white picture but a gradient color where black is max sample size and white is zero 
-        // and the rest in between... Yeah there will be some RGB incresing thing...
+        if ($this->_dataArray[$x][$y] === 0) {
+            return "white"; //If it's none no need to bother with calculations, just return white...
+        }
+        $val = (int) $this->_dataArray[$x][$y] * 256 / $this->_sampleSize;
+        $rgb = dechex(256 - $val);
+        return "#" . $rgb . $rgb . $rgb;
     }
 }
