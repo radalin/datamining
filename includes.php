@@ -80,6 +80,9 @@ class CubeMatcher
 {
     private $_reader;
     
+    /**
+     * @var DataCubeList
+     */
     private $_dataCubeList;
     
     public function __construct($trainFile, $testFile, $cubeSize)
@@ -90,6 +93,7 @@ class CubeMatcher
     public function trainMe()
     {
         $this->_dataCubeList = $this->_reader->readTrainingData();
+//        var_dump($this->_dataCubeList);
     }
     
     public function drawMeans()
@@ -97,6 +101,39 @@ class CubeMatcher
         for ($i = 0; $i < count($this->_dataCubeList); $i++) {
             $this->_dataCubeList[$i]->drawMean();
         }
+    }
+    
+    public function matchTestDataWithAll()
+    {
+        
+    }
+    
+    public function matchTestDataWithMeans()
+    {
+        if ($this->_dataCubeList == null) {
+            $this->trainMe();
+        }
+        $testCubes = $this->_reader->readTestData();
+        $testCount = count($testCubes);
+        $failure = 0;
+        $values = array();
+        for ($i = 0; $i < $testCount; $i++) {
+            //Match with all means...
+            for ($j = 0; $j < count($this->_dataCubeList); $j++) {
+                $values[$j] = $testCubes[$i]->matchWith($this->_dataCubeList[$j]->getMean());
+            }
+            arsort($values); //Sort it by reverse...
+            foreach ($values as $key => $val) {
+                if ($key == $testCubes[$i]->numberValue) {
+                    echo "Success, we have for {$testCubes[$i]->numberValue} and {$key}.<br>";
+                } else {
+                    echo "Confused {$testCubes[$i]->numberValue} with $key<br />";
+                    $failure++;
+                }
+                break;
+            }
+        }
+        echo "Total Failure: " . $failure;
     }
 }
 
@@ -189,20 +226,26 @@ class DataCube
         return "#FFFFFF"; //Return white...
     }
     
-    private function _matchWith(DataCube $cube)
+    public function matchWith(DataCube $cube)
     {
         //Return the heuristic number...
         //The mathic numbers gives us a point, higher points means, higher matching the one with highest match num is the winner...
+        $heuristic = 0;
         for ($i = 0; $i < count($this->_dataArray); $i++) {
             for ($j = 0; $j < count($this->_dataArray[$i]); $j++) {
-                //if ($this->)
+                //var_dump($this->_dataArray[$i][$j], $cube->dataArray[$i][$j]);
+                if ($this->_dataArray[$i][$j] > 0 && $cube->dataArray[$i][$j] > 0) { //If there is a value in both of them...
+                    $heuristic += $cube->dataArray[$i][$j] * $cube->dataArray[$i][$j];
+                }
+                if ($this->_dataArray[$i][$j] == 0 && $cube->dataArray[$i][$j] == 0) { //If zeros are matching...
+                    $heuristic += 30 * 30;
+                }
+                if ($this->_dataArray[$i][$j] == 0 && $cube->dataArray[$i][$j] < 30) { //If the cube is zero and mean is gray...
+                    $heuristic += 30 * 30;
+                }
             }
         }
-    }
-    
-    public function matchWithAll(DataCubeList $cubeList)
-    {
-        return $this->matchWithNearest($cubeList, 1); //Match with the closes match only...
+        return $heuristic;
     }
     
     /**
@@ -213,7 +256,7 @@ class DataCube
     {
         $heuristics = array();
         for ($i = 0; $i < $cubeList->count(); $i++) {
-            $heuristics[$i] = $this->_matchWith($cubeArray->get($i)); //Calculate the heuristics for the DataCube thingy...
+            $heuristics[$i] = $this->matchWith($cubeArray->get($i)); //Calculate the heuristics for the DataCube thingy...
         }
         //Now match with $k nearest neighbors...
         //Sort the array as decreasing while keeping the index values (key-value associations) where I will get to the DataCube from $cubeList...
@@ -234,17 +277,13 @@ class DataCube
   
     //The below is the less important stuff, the drawing implementation etc...
     
-    public function __set($key, $value)
-    {
-        $attributeName = "_" . $key;
-        $this->$attributeName = $value;
-        return $this;
-    }
-    
     public function __get($key)
     {
-        $attributeName = "_" . $key;
-        return $this->$attributeName;
+        if ($key == "dataArray" || $key == "numberValue") {
+            $attributeName = "_" . $key;
+            return $this->$attributeName;
+        }
+        return "";
     }
     
     public function draw()
@@ -305,7 +344,7 @@ class MeanDataCube extends DataCube
     
     public function draw()
     {
-        echo '<div class="meanContainer' . $this->_numberValue . '">Total Number of Samples: ' . $this->_sampleSize;
+        echo '<div class="' . $this->_numberValue . '">Total Number of Samples: ' . $this->_sampleSize;
         parent::draw();
         echo '</div>';
     }
