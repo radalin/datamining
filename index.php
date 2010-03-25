@@ -31,8 +31,9 @@ $cellSize = 10;
             //We will create sample Examples from there...
             $matcher = new CubeMatcher("traicom.txt", "testcom.txt", 16);
             $matcher->trainMe();
-            //$matcher->drawMeans();
-            $matcher->matchTestDataWithMeans();
+            $matcher->drawMeans();
+            //$matcher->matchTestDataWithMeans();
+            //$matcher->matchTestDataWithTraining();
         ?>
     </body>
 </html>

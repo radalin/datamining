@@ -57,7 +57,7 @@ class DataCubeReader
         $fileContents = split("\n", file_get_contents($this->_testFile));
         //Split from lines...
         $count = count($fileContents);
-        $cubeList = array();
+        $cubeList = new DataCubeList(null, array());
         for ($i = 0; $i < $count; $i += $this->_cubeSize + 1) { //Increase the count 17 by 17, so read the cubes as block...
             $numberValue = trim($fileContents[$i + $this->_cubeSize]);
             $cubeItems = array();
@@ -69,7 +69,7 @@ class DataCubeReader
                 $cubeItems[] = $row;
             }
             $cube = new DataCube($numberValue, $cubeItems);
-            $cubeList[] = clone $cube;
+            $cubeList->add($cube);
             $cube = null;
         }
         return $cubeList;
@@ -81,9 +81,14 @@ class CubeMatcher
     private $_reader;
     
     /**
-     * @var DataCubeList
+     * @var array<DataCubeList>
      */
     private $_dataCubeList;
+    
+    /**
+     * @var DataCubList
+     */
+    private $_merger;
     
     public function __construct($trainFile, $testFile, $cubeSize)
     {
@@ -93,7 +98,6 @@ class CubeMatcher
     public function trainMe()
     {
         $this->_dataCubeList = $this->_reader->readTrainingData();
-//        var_dump($this->_dataCubeList);
     }
     
     public function drawMeans()
@@ -103,9 +107,39 @@ class CubeMatcher
         }
     }
     
-    public function matchTestDataWithAll()
+    private function _mergeAllCubes()
     {
-        
+        $this->_merger = new DataCubeList(null, array());
+        for ($i = 0; $i < count($this->_dataCubeList); $i++) {
+            for ($j = 0; $j < $this->_dataCubeList[$i]->count(); $j++) {
+                $this->_merger->add($this->_dataCubeList[$i]->get($j));
+            }
+        }
+        return $this->_merger;
+    }
+    
+    public function matchTestDataWithTraining()
+    {
+        if ($this->_dataCubeList == null) {
+            $this->trainMe();
+        }
+        $testCubes = $this->_reader->readTestData();
+        $this->_mergeAllCubes();
+        $testCount = $testCubes->count();
+        $confusionMatrix = array();
+        for ($i = 0; $i < 10; $i++) {
+            $confusionMatrix[$i] = array(); //Create a two dimensional array, Don't remember a better implementation right now, don't care either...
+            for ($j = 0; $j < 10; $j++) {
+                $confusionMatrix[$i][$j] = 0;
+            }
+        }
+        $failure = 0;
+        for ($i = 0; $i < $testCount; $i++) {
+            $value = $testCubes->get($i)->matchWithNearest($this->_merger, 5);
+            flush();
+            $confusionMatrix[$testCubes->get($i)->numberValue][$value]++;
+        }
+        var_dump($confusionMatrix);
     }
     
     public function matchTestDataWithMeans()
@@ -115,6 +149,13 @@ class CubeMatcher
         }
         $testCubes = $this->_reader->readTestData();
         $testCount = count($testCubes);
+        $confusionMatrix = array(); //first dimension is what it should be, while the other is what actually is...
+        for ($i = 0; $i < 10; $i++) {
+            $confustionMatrix[$i] = array(); //Create a two dimensional array, Don't remember a better implementation right now, don't care either...
+            for ($j = 0; $j < 10; $j++) {
+                $confustionMatrix[$i][$j] = 0;
+            }
+        }
         $failure = 0;
         $values = array();
         for ($i = 0; $i < $testCount; $i++) {
@@ -130,7 +171,8 @@ class CubeMatcher
                     echo "Confused {$testCubes[$i]->numberValue} with $key<br />";
                     $failure++;
                 }
-                break;
+                $confusionMatrix[$testCubes[$i]->numberValue][$key]++;
+                break; //Quit after the first as there is no need to go on, because the one with most points is the perfect match!
             }
         }
         echo "Total Failure: " . $failure;
@@ -167,7 +209,7 @@ class DataCubeList
     
     public function get($index)
     {
-        return $this->_cubeArray[$i];
+        return $this->_cubeArray[$index];
     }
     
     public function count()
@@ -233,7 +275,7 @@ class DataCube
         $heuristic = 0;
         for ($i = 0; $i < count($this->_dataArray); $i++) {
             for ($j = 0; $j < count($this->_dataArray[$i]); $j++) {
-                //var_dump($this->_dataArray[$i][$j], $cube->dataArray[$i][$j]);
+                //FIXME: Turn this to a proper algortihm...
                 if ($this->_dataArray[$i][$j] > 0 && $cube->dataArray[$i][$j] > 0) { //If there is a value in both of them...
                     $heuristic += $cube->dataArray[$i][$j] * $cube->dataArray[$i][$j];
                 }
@@ -256,23 +298,28 @@ class DataCube
     {
         $heuristics = array();
         for ($i = 0; $i < $cubeList->count(); $i++) {
-            $heuristics[$i] = $this->matchWith($cubeArray->get($i)); //Calculate the heuristics for the DataCube thingy...
+            $heuristics[$i] = $this->matchWith($cubeList->get($i)); //Calculate the heuristics for the DataCube thingy...
         }
         //Now match with $k nearest neighbors...
         //Sort the array as decreasing while keeping the index values (key-value associations) where I will get to the DataCube from $cubeList...
-        $heuristics = asort($heuristics);
+        arsort($heuristics);
         //So here is the easy part, what are the values of top $k elements...
         for ($i = 0; $i < 10; $i++) {
             $numbers[$i] = 0; //A baaaaaaaad code comes here....
         }
-        for ($i = 0; $i <= $k; $i++) {
-            var_dump($cubeArray->get($i)->numberValue, $heuristics[$i]);
-            $numbers[$cubeArray->get($i)->numberValue]++;
+        $i = 1;
+        foreach ($heuristics as $index => $heuristic) {
+            if ($i > $k) {
+                break;
+            }
+            $numbers[$cubeList->get($index)->numberValue]++;
+            $i++;
         }
         //Now sort the numbers array without maintaining the key-value association
-        ksort($numbers);
-        var_dump($numbers);
-        return $numbers[0]; //Returns the number with highest value...
+        arsort($numbers);
+        //get the keys
+        $numVals = array_keys($numbers);
+        return $numVals[0]; //Returns the number with highest value...
     }
   
     //The below is the less important stuff, the drawing implementation etc...
