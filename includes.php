@@ -147,7 +147,7 @@ class CubeMatcher
             $confusionMatrix[$testCubes->get($i)->numberValue][$value]++;
         }
         echo "</div>";
-        $this->drawConfusionMatrix($confustionMatrix, "Total Failure: " . $failure . "/" . $testCount);
+        $this->drawConfusionMatrix($confusionMatrix, "Total Failure: " . $failure . "/" . $testCount);
     }
     
     public function matchTestDataWithMeans()
@@ -283,20 +283,20 @@ class DataCubeList
 
 class DataCube
 {
-    protected $_dataArray = array();
+    public $dataArray = array();
     
-    protected $_numberValue = null;
+    public $numberValue = null;
     
     public function __construct($number = null, $array = array())
     {
-        $this->_dataArray = $array;
-        $this->_numberValue = $number;
+        $this->dataArray = $array;
+        $this->numberValue = $number;
     }
         
     protected function _findCellColor($x, $y)
     {
         //Every 1 (one) is black and every 0 (zero) is white
-        if ($this->_dataArray[$x][$y] == 1) {
+        if ($this->dataArray[$x][$y] == 1) {
             return "#000000"; //Return black...
         }
         return "#FFFFFF"; //Return white...
@@ -307,10 +307,10 @@ class DataCube
         //Return the heuristic number...
         //The mathic numbers gives us a point, higher points means, higher matching the one with highest match num is the winner...
         $heuristic = 0;
-        for ($i = 0; $i < count($this->_dataArray); $i++) {
-            for ($j = 0; $j < count($this->_dataArray[$i]); $j++) {
+        for ($i = 0; $i < count($this->dataArray); $i++) {
+            for ($j = 0; $j < count($this->dataArray[$i]); $j++) {
                 //FIXME: Turn this to a proper algortihm...
-                if ($this->_dataArray[$i][$j] > 0 && $cube->dataArray[$i][$j] > 0) { //If there is a value in both of them...
+                if ($this->dataArray[$i][$j] > 0 && $cube->dataArray[$i][$j] > 0) { //If there is a value in both of them...
                     $heuristic += $cube->dataArray[$i][$j] * $cube->dataArray[$i][$j];
                 }
             }
@@ -352,23 +352,14 @@ class DataCube
   
     //The below is the less important stuff, the drawing implementation etc...
     
-    public function __get($key)
-    {
-        if ($key == "dataArray" || $key == "numberValue") {
-            $attributeName = "_" . $key;
-            return $this->$attributeName;
-        }
-        return "";
-    }
-    
     public function draw()
     {
-        echo '<div class="dataCube"> This Number is: ' . $this->_numberValue . '<br />';
-        for ($i = 0; $i < count($this->_dataArray); $i++) {
+        echo '<div class="dataCube"> This Number is: ' . $this->numberValue . '<br />';
+        for ($i = 0; $i < count($this->dataArray); $i++) {
             echo '<div class="dataCubeRow">';
-            for ($j = 0; $j < count($this->_dataArray[$i]); $j++) {
+            for ($j = 0; $j < count($this->dataArray[$i]); $j++) {
                 $color = $this->_findCellColor($i, $j);
-                $this->_drawCellWithColor($color, $this->_dataArray[$i][$j]);
+                $this->_drawCellWithColor($color, $this->dataArray[$i][$j]);
             }
             echo '</div>';
         }
@@ -394,22 +385,22 @@ class MeanDataCube extends DataCube
     public function addToSum(DataCube $cube)
     {
         $this->_sampleSize++; //Increase the sample size...
-        for ($x = 0; $x < count($this->_dataArray); $x++) {
-            for ($y = 0; $y < count($this->_dataArray[$x]); $y++) {
-                $this->_dataArray[$x][$y] = $this->_dataArray[$x][$y] + $cube->dataArray[$x][$y];
+        for ($x = 0; $x < count($this->dataArray); $x++) {
+            for ($y = 0; $y < count($this->dataArray[$x]); $y++) {
+                $this->dataArray[$x][$y] = $this->dataArray[$x][$y] + $cube->dataArray[$x][$y];
             }
         }
     }
     protected function _findCellColor($x, $y)
     {
-        if ($this->_dataArray[$x][$y] === 0) {
+        if ($this->dataArray[$x][$y] === 0) {
             return "white"; //If it's none no need to bother with calculations, just return white...
         }
-        if ($this->_dataArray[$x][$y] === $this->_sampleSize) {
+        if ($this->dataArray[$x][$y] === $this->_sampleSize) {
             return "black"; //If it's equal to sampleSize no need to bother with calculations, just return black...
         }
         //If it's something else no need to bother with calculations, oh,... I have to...
-        $val = (int) $this->_dataArray[$x][$y] * 256 / $this->_sampleSize;
+        $val = (int) $this->dataArray[$x][$y] * 256 / $this->_sampleSize;
         $rgb = dechex(256 - $val);
         if (strlen($rgb) === 1) {
             $rgb = "0" . $rgb; //Bad fix to fix the problem which occurs in RGB 'c' was interpreted as 'cc' however it should have been interpreted as '0c'!!!!
@@ -419,7 +410,7 @@ class MeanDataCube extends DataCube
     
     public function draw()
     {
-        echo '<div class="meanContainer' . $this->_numberValue . '">Total Number of Samples: ' . $this->_sampleSize;
+        echo '<div class="meanContainer' . $this->numberValue . '">Total Number of Samples: ' . $this->_sampleSize;
         parent::draw();
         echo '</div>';
     }
