@@ -123,6 +123,7 @@ class CubeMatcher
         if ($this->_dataCubeList == null) {
             $this->trainMe();
         }
+        echo "<div class='resultsList'>";
         $testCubes = $this->_reader->readTestData();
         $this->_mergeAllCubes();
         $testCount = $testCubes->count();
@@ -135,11 +136,18 @@ class CubeMatcher
         }
         $failure = 0;
         for ($i = 0; $i < $testCount; $i++) {
-            $value = $testCubes->get($i)->matchWithNearest($this->_merger, 5);
+            $value = $testCubes->get($i)->matchWithNearest($this->_merger, 3);
+            if ($value == $testCubes->get($i)->numberValue) {
+                echo $i . "th, Success, we have for {$testCubes->get($i)->numberValue} and {$value}.<br>";
+            } else {
+                echo $i . "th, Confused {$testCubes->get($i)->numberValue} with {$value}<br />";
+                $failure++;
+            }
             flush();
             $confusionMatrix[$testCubes->get($i)->numberValue][$value]++;
         }
-        var_dump($confusionMatrix);
+        echo "</div>";
+        $this->drawConfusionMatrix($confustionMatrix, "Total Failure: " . $failure . "/" . $testCount);
     }
     
     public function matchTestDataWithMeans()
@@ -147,13 +155,14 @@ class CubeMatcher
         if ($this->_dataCubeList == null) {
             $this->trainMe();
         }
+        echo "<div class='resultsList'>";
         $testCubes = $this->_reader->readTestData();
-        $testCount = count($testCubes);
+        $testCount = $testCubes->count();
         $confusionMatrix = array(); //first dimension is what it should be, while the other is what actually is...
         for ($i = 0; $i < 10; $i++) {
-            $confustionMatrix[$i] = array(); //Create a two dimensional array, Don't remember a better implementation right now, don't care either...
+            $confusionMatrix[$i] = array(); //Create a two dimensional array, Don't remember a better implementation right now, don't care either...
             for ($j = 0; $j < 10; $j++) {
-                $confustionMatrix[$i][$j] = 0;
+                $confusionMatrix[$i][$j] = 0;
             }
         }
         $failure = 0;
@@ -161,21 +170,46 @@ class CubeMatcher
         for ($i = 0; $i < $testCount; $i++) {
             //Match with all means...
             for ($j = 0; $j < count($this->_dataCubeList); $j++) {
-                $values[$j] = $testCubes[$i]->matchWith($this->_dataCubeList[$j]->getMean());
+                $values[$j] = $testCubes->get($i)->matchWith($this->_dataCubeList[$j]->getMean());
             }
             arsort($values); //Sort it by reverse...
             foreach ($values as $key => $val) {
-                if ($key == $testCubes[$i]->numberValue) {
-                    echo "Success, we have for {$testCubes[$i]->numberValue} and {$key}.<br>";
+                if ($key == $testCubes->get($i)->numberValue) {
+                    echo $i . "th, Success, we have for {$testCubes->get($i)->numberValue} and {$key}.<br>";
                 } else {
-                    echo "Confused {$testCubes[$i]->numberValue} with $key<br />";
+                    echo $i . "th, Confused {$testCubes->get($i)->numberValue} with $key<br />";
                     $failure++;
                 }
-                $confusionMatrix[$testCubes[$i]->numberValue][$key]++;
+                $confusionMatrix[$testCubes->get($i)->numberValue][$key]++;
                 break; //Quit after the first as there is no need to go on, because the one with most points is the perfect match!
             }
+            flush();
         }
-        echo "Total Failure: " . $failure;
+        echo "</div>";
+        $this->drawConfusionMatrix($confusionMatrix, "Total Failure: " . $failure . "/" . $testCount);
+    }
+    
+    public function drawConfusionMatrix($matrix, $footerStr)
+    {
+        echo '<div id="confusionMatrix">
+                <table cellpadding="2" cellspacing="2" border="1">
+                    <tr>
+                        <th width="30">#</th>
+        ';
+        for ($i = 0; $i < 10; $i++) {
+            echo "<th width='30'>$i</th>"; //Show the header values...
+        }
+        echo "</tr>";
+        for ($i = 0; $i < count($matrix); $i++) {
+            echo "<tr><td align='center'><strong>$i</strong></td>";
+            for ($j = 0; $j < count($matrix[$i]); $j++) {
+                echo "<td align='center'>{$matrix[$i][$j]}</td>";
+            }
+            echo "</tr>";
+        }
+        echo "</table>";
+        echo $footerStr;
+        echo '</div>';
     }
 }
 
@@ -278,12 +312,6 @@ class DataCube
                 //FIXME: Turn this to a proper algortihm...
                 if ($this->_dataArray[$i][$j] > 0 && $cube->dataArray[$i][$j] > 0) { //If there is a value in both of them...
                     $heuristic += $cube->dataArray[$i][$j] * $cube->dataArray[$i][$j];
-                }
-                if ($this->_dataArray[$i][$j] == 0 && $cube->dataArray[$i][$j] == 0) { //If zeros are matching...
-                    $heuristic += 30 * 30;
-                }
-                if ($this->_dataArray[$i][$j] == 0 && $cube->dataArray[$i][$j] < 30) { //If the cube is zero and mean is gray...
-                    $heuristic += 30 * 30;
                 }
             }
         }
@@ -391,7 +419,7 @@ class MeanDataCube extends DataCube
     
     public function draw()
     {
-        echo '<div class="' . $this->_numberValue . '">Total Number of Samples: ' . $this->_sampleSize;
+        echo '<div class="meanContainer' . $this->_numberValue . '">Total Number of Samples: ' . $this->_sampleSize;
         parent::draw();
         echo '</div>';
     }
