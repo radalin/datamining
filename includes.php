@@ -118,7 +118,7 @@ class CubeMatcher
         return $this->_merger;
     }
     
-    public function matchTestDataWithTraining()
+    public function matchTestDataWithTraining($nearest = 3)
     {
         if ($this->_dataCubeList == null) {
             $this->trainMe();
@@ -136,7 +136,7 @@ class CubeMatcher
         }
         $failure = 0;
         for ($i = 0; $i < $testCount; $i++) {
-            $value = $testCubes->get($i)->matchWithNearest($this->_merger, 3);
+            $value = $testCubes->get($i)->matchWithNearest($this->_merger, $nearest);
             if ($value == $testCubes->get($i)->numberValue) {
                 echo $i . "th, Success, we have for {$testCubes->get($i)->numberValue} and {$value}.<br>";
             } else {
@@ -343,6 +343,11 @@ class DataCube
             $numbers[$cubeList->get($index)->numberValue]++;
             $i++;
         }
+        echo "[";
+        foreach ($numbers as $key => $val) {
+            echo "$key => $val, ";
+        }
+        echo "] ";
         //Now sort the numbers array without maintaining the key-value association
         arsort($numbers);
         //get the keys

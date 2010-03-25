@@ -23,20 +23,28 @@ $cellSize = 10;
             div.meanContainer7 { position: absolute; left: 520px; top: 270px; }
             div.meanContainer8 { position: absolute; left: 520px; top: 500px; }
             div.meanContainer9 { position: absolute; left: 780px; top: 40px; }
-            div.resultsList { position: absolute; top: 40px; width: 300px; height: 400px; overflow-x: hidden; overflow-y: scroll; }
-            #confusionMatrix { position: absolute; top: 40px; left: 320px; }
+            div.resultsList { position: absolute; top: 40px; width: 500px; height: 400px; overflow-x: hidden; overflow-y: scroll; }
+            #confusionMatrix { position: absolute; top: 40px; left: 520px; }
         </style>
     </head>
     <body>
         <!-- Show A simple GUI -->
         <div>
             Please Select an action:
-            <select name="action" onChange="document.location='index.php?action=' + this.value">
+            <select name="action" onChange="document.location='index.php?action=' + this.value + '&nearest=' + document.getElementById('nearest').value">
                 <option value=""></option>
                 <option value="drawMean">Draw Means For Training Set</option>
                 <option value="meanMatch">Match Means and Draw Confusion Matrix</option>
-                <option value="totalMatch">Match Everything and Draw Confusion Matrix</option>
+                <option value="totalMatch">Match 1-on-1 and Draw Confusion Matrix</option>
             </select>
+            Choose K nearest number:
+            <select name="nearest" id="nearest">
+                <option value="1">1</option>
+                <option value="3">3</option>
+                <option value="5">5</option>
+                <option value="7">7</option>
+                <option value="9">9</option>
+            </select> (1-on-1 Matching only)
         </div>
         <?php
             if ($_GET) {
@@ -52,7 +60,7 @@ $cellSize = 10;
                             $matcher->matchTestDataWithMeans();
                         break;
                     case "totalMatch":
-                            $matcher->matchTestDataWithTraining();
+                            $matcher->matchTestDataWithTraining($_GET['nearest']);
                     break;
                     default:
                         echo "No Action is Selected, Please Select A One!";
