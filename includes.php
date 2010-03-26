@@ -172,7 +172,7 @@ class CubeMatcher
             for ($j = 0; $j < count($this->_dataCubeList); $j++) {
                 $values[$j] = $testCubes->get($i)->matchWith($this->_dataCubeList[$j]->getMean());
             }
-            arsort($values); //Sort it by reverse...
+            asort($values); //Sort it by reverse...
             foreach ($values as $key => $val) {
                 if ($key == $testCubes->get($i)->numberValue) {
                     echo $i . "th, Success, we have for {$testCubes->get($i)->numberValue} and {$key}.<br>";
@@ -237,6 +237,7 @@ class DataCubeList
         for ($i = 1; $i < $this->count(); $i++) { //As I have added the first, keep going from the index with 1...
             $this->_meanDataCube->addToSum($this->_cubeArray[$i]); //This will calculate the rest...
         }
+        $this->_meanDataCube->finalize();
     }
     
     //Below is the less important stuff some simple getters and setters and drawers etc...
@@ -310,9 +311,12 @@ class DataCube
         for ($i = 0; $i < count($this->dataArray); $i++) {
             for ($j = 0; $j < count($this->dataArray[$i]); $j++) {
                 //FIXME: Turn this to a proper algortihm...
+                $heuristic += ($cube->dataArray[$i][$j] - $this->dataArray[$i][$j]) * ($cube->dataArray[$i][$j] - $this->dataArray[$i][$j]);
+                /*
                 if ($this->dataArray[$i][$j] > 0 && $cube->dataArray[$i][$j] > 0) { //If there is a value in both of them...
                     $heuristic += $cube->dataArray[$i][$j] * $cube->dataArray[$i][$j];
                 }
+                */
             }
         }
         return $heuristic;
@@ -330,7 +334,7 @@ class DataCube
         }
         //Now match with $k nearest neighbors...
         //Sort the array as decreasing while keeping the index values (key-value associations) where I will get to the DataCube from $cubeList...
-        arsort($heuristics);
+        asort($heuristics);
         //So here is the easy part, what are the values of top $k elements...
         for ($i = 0; $i < 10; $i++) {
             $numbers[$i] = 0; //A baaaaaaaad code comes here....
@@ -352,7 +356,7 @@ class DataCube
         arsort($numbers);
         //get the keys
         $numVals = array_keys($numbers);
-        return $numVals[0]; //Returns the number with highest value...
+        return $numVals[0]; //Returns the number with lowest value...
     }
   
     //The below is the less important stuff, the drawing implementation etc...
@@ -381,6 +385,8 @@ class MeanDataCube extends DataCube
 {
     private $_sampleSize;
     
+    private $_isFinalized = false;
+    
     public function __construct($number, $array)
     {
         parent::__construct($number, $array);
@@ -389,6 +395,9 @@ class MeanDataCube extends DataCube
     
     public function addToSum(DataCube $cube)
     {
+        if ($this->_isFinalized) {
+            throw new Exception("You can't add any more data cubes to this Mean Cube as it's finalized");
+        }
         $this->_sampleSize++; //Increase the sample size...
         for ($x = 0; $x < count($this->dataArray); $x++) {
             for ($y = 0; $y < count($this->dataArray[$x]); $y++) {
@@ -396,6 +405,17 @@ class MeanDataCube extends DataCube
             }
         }
     }
+    
+    public function finalize()
+    {
+        $this->_isFinalized = true;
+        for ($x = 0; $x < count($this->dataArray); $x++) {
+            for ($y = 0; $y < count($this->dataArray[$x]); $y++) {
+                $this->dataArray[$x][$y] = $this->dataArray[$x][$y] / $this->_sampleSize;
+            }
+        }
+    }
+    
     protected function _findCellColor($x, $y)
     {
         if ($this->dataArray[$x][$y] === 0) {
