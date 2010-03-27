@@ -421,11 +421,12 @@ class MeanDataCube extends DataCube
         if ($this->dataArray[$x][$y] === 0) {
             return "white"; //If it's none no need to bother with calculations, just return white...
         }
-        if ($this->dataArray[$x][$y] === $this->_sampleSize) {
-            return "black"; //If it's equal to sampleSize no need to bother with calculations, just return black...
+        if ($this->dataArray[$x][$y] == 1) {
+            return "black";
         }
         //If it's something else no need to bother with calculations, oh,... I have to...
-        $val = (int) $this->dataArray[$x][$y] * 256 / $this->_sampleSize;
+        //FIXME: I should calculate the colors where 0 is 256 and 1 is 0, so the they should be between...
+        $val = $this->dataArray[$x][$y] * 256;
         $rgb = dechex(256 - $val);
         if (strlen($rgb) === 1) {
             $rgb = "0" . $rgb; //Bad fix to fix the problem which occurs in RGB 'c' was interpreted as 'cc' however it should have been interpreted as '0c'!!!!
